@@ -20,6 +20,16 @@ provider "azurerm" {
 # Required so that the tenant_id element can be dynamically added
 data "azurerm_client_config" "current" {}
 
+variable "certificate_name" {
+  type    = string
+  default = "myCertificate"
+}
+
+variable "subject_cn" {
+  type    = string
+  default = "example.com"
+}
+
 resource "azurerm_resource_group" "cert-rg" {
   name     = "cert-testing"
   location = "Australia Southeast"
@@ -50,7 +60,7 @@ resource "azurerm_key_vault" "cert-keyv" {
 }
 
 resource "azurerm_key_vault_certificate" "cert-certificate" {
-  name         = "snoogans"
+  name         = var.certificate_name
   key_vault_id = azurerm_key_vault.cert-keyv.id
 
   certificate_policy {
@@ -81,7 +91,7 @@ resource "azurerm_key_vault_certificate" "cert-certificate" {
 
     x509_certificate_properties {
       # Adjust the subject, validity period, etc., as needed
-      subject            = "CN=ADMS-Notification"
+      subject            = "CN=${var.subject_cn}"
       validity_in_months = 60
 
       key_usage = [
