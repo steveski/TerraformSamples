@@ -1,5 +1,5 @@
 trigger:
-- main
+- none
 
 parameters:
 - name: certificateName
@@ -12,14 +12,18 @@ parameters:
   type: string
   default: 'CN=myCertificate'
 
+- name: rootObjectId
+  displayName: Privileged user object_id
+  type: string
+  default: 'Enter a valid user object_id'
+
 pool:
   vmImage: 'ubuntu-latest'
 
 variables:
   terraformVersion: 'latest'
-  serviceConnection: 'yourAzureServiceConnectionName'
-  keyVaultName: 'yourKeyVaultName'
-  resourceGroupName: 'yourResourceGroupName'
+  serviceConnection: 'TerraformCerts-Dev'
+  keyVaultName: 'the-keyv-testing'
 
 stages:
 - stage: Terraform
@@ -27,27 +31,37 @@ stages:
   - job: TerraformInitApply
     displayName: 'Initialize and Apply Terraform'
     steps:
-    - task: TerraformInstaller@0
+    - task: TerraformInstaller@1
       displayName: 'Install Terraform'
       inputs:
         terraformVersion: $(terraformVersion)
 
-    - task: TerraformCLI@0
-      displayName: 'Terraform Init'
-      inputs:
-        command: 'init'
-        workingDirectory: '$(System.DefaultWorkingDirectory)'
-        backendType: 'azurerm'
-        backendServiceArm: $(serviceConnection)
-        ensureBackend: true
 
-    - task: TerraformCLI@0
-      displayName: 'Terraform Apply'
+    - task: TerraformTaskV4@4
       inputs:
-        command: 'apply'
-        workingDirectory: '$(System.DefaultWorkingDirectory)'
-        environmentServiceName: $(serviceConnection)
-        commandOptions: '-auto-approve -var "certificate_name=${{ parameters.certificateName }}" -var "subject_cn=${{ parameters.subjectCN }}"'
+        provider: 'azurerm'
+        command: 'init'
+        backendServiceArm: 'TerraformCerts-Dev'
+        backendAzureRmResourceGroupName: 'cert-testing'
+        backendAzureRmContainerName: 'sfs'
+    
+
+    # - task: TerraformCLI@0
+    #   displayName: 'Terraform Init'
+    #   inputs:
+    #     command: 'init'
+    #     workingDirectory: '$(System.DefaultWorkingDirectory)'
+    #     backendType: 'azurerm'
+    #     backendServiceArm: $(serviceConnection)
+    #     ensureBackend: true
+
+    # - task: TerraformCLI@0
+    #   displayName: 'Terraform Apply'
+    #   inputs:
+    #     command: 'apply'
+    #     workingDirectory: '$(System.DefaultWorkingDirectory)'
+    #     environmentServiceName: $(serviceConnection)
+    #     commandOptions: '-auto-approve -var "certificate_name=${{ parameters.certificateName }}" -var "subject_cn=${{ parameters.subjectCN }}" -var "root_object_id=${{ parameters.rootObjectId }}'
 
   - job: ExtractCertificatePublicKey
     displayName: 'Extract Certificate Public Key'
