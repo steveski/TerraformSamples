@@ -30,27 +30,31 @@ variable "subject_cn" {
   default = "example.com"
 }
 
-resource "azurerm_resource_group" "cert-rg" {
-  name     = "cert-testing"
-  location = "Australia Southeast"
-  tags = {
-    environment = "dev"
-  }
+variable "root_object_id" {
+  type    = string
+  default = "Enter a valid user guid"
 }
 
-resource "azurerm_key_vault" "cert-keyv" {
-  name                = "cert-keyv-testing"
-  location            = azurerm_resource_group.cert-rg.location
-  resource_group_name = azurerm_resource_group.cert-rg.name
+locals {
+  kv_name = "the-keyv-testing"
+  rg_name = "cert-testing"
+  sku_name = "standard"
+  location = "Australia Southeast"
+}
+
+resource "azurerm_key_vault" "the-keyv" {
+  name = local.kv_name
+  location = local.location
+  resource_group_name = local.rg_name
   tenant_id           = data.azurerm_client_config.current.tenant_id
-  sku_name            = "standard"
+  sku_name            = local.sku_name
 
   # soft_delete_retention_days = 90
   # purge_protection_enabled   = true
 
   access_policy {
     tenant_id = data.azurerm_client_config.current.tenant_id
-    object_id = "<< user object_id here >>"
+    object_id = ${var.root_object_id} # <<----- Can this be derived dynamically?
 
     key_permissions         = ["Create", "Get", "Delete", "List", "Update", "Import", "Backup", "Restore", "Recover"]
     secret_permissions      = ["Set", "Get", "Delete", "List", "Recover", "Backup", "Restore"]
@@ -61,7 +65,7 @@ resource "azurerm_key_vault" "cert-keyv" {
 
 resource "azurerm_key_vault_certificate" "cert-certificate" {
   name         = var.certificate_name
-  key_vault_id = azurerm_key_vault.cert-keyv.id
+  key_vault_id = azurerm_key_vault.the-keyv.id
 
   certificate_policy {
     issuer_parameters {
@@ -109,7 +113,7 @@ resource "azurerm_key_vault_certificate" "cert-certificate" {
   }
 
   depends_on = [
-    azurerm_key_vault.cert-keyv,
+    azurerm_key_vault.the-keyv,
   ]
 
 }
